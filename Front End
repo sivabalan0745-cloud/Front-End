@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Movie Reviews & Ratings</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1020; --accent:#ff6b6b; --muted:#94a3b8; --glass: rgba(255,255,255,0.03);
+      --radius:14px; --gap:18px; --maxw:1100px;
+      --shadow: 0 6px 20px rgba(2,6,23,0.6);
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial; margin:0; background:linear-gradient(180deg,#071126 0%, #071129 100%); color:#e6eef8; -webkit-font-smoothing:antialiased}
+    .wrap{max-width:var(--maxw); margin:36px auto; padding:20px;}
+
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#1e293b,#0ea5a0);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    .controls{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .search{flex:1;min-width:220px}
+    input[type=text]{width:100%;padding:10px 12px;border-radius:10px;border:0;background:var(--glass);color:inherit;outline:none}
+    .btn{background:var(--accent);color:#071126;padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+    .filter{display:flex;gap:8px;align-items:center}
+    select{padding:10px;border-radius:10px;border:0;background:var(--glass);color:inherit}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--gap);margin-top:20px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:12px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:flex-start}
+    .poster{min-width:88px;height:132px;border-radius:8px;background:#091024;display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--muted);overflow:hidden}
+    .meta{flex:1}
+    .title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .title h3{margin:0;font-size:16px}
+    .sub{color:var(--muted);font-size:13px;margin-top:6px}
+    .rating{margin-top:8px;display:flex;gap:8px;align-items:center}
+    .stars{display:inline-flex;gap:4px}
+    .star{font-size:18px;opacity:0.6}
+    .star.filled{color:gold;opacity:1}
+    .actions{display:flex;gap:8px;margin-top:10px}
+    .link{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px;border-radius:10px;color:var(--muted);cursor:pointer}
+
+    footer{margin:26px 0;color:var(--muted);font-size:13px}
+
+    /* Modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:none;align-items:center;justify-content:center;padding:16px}
+    .modal{background:linear-gradient(180deg,#07122b,#04101d);padding:16px;border-radius:12px;max-width:720px;width:100%}
+    .form-row{display:flex;gap:8px;margin-top:10px}
+    textarea{width:100%;min-height:100px;padding:10px;border-radius:8px;border:0;background:var(--glass);color:inherit}
+    .small{font-size:13px;color:var(--muted)}
+
+    /* Responsive tweaks */
+    @media(max-width:560px){.poster{min-width:68px;height:98px}}
+
+    /* Empty state */
+    .empty{padding:36px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);text-align:center;color:var(--muted)}
+
+    /* Tiny helper */
+    .chip{padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.02);font-size:12px;color:var(--muted)}
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">MR</div>
+        <div>
+          <h1>Movie Reviews & Ratings</h1>
+          <p class="lead">Discover, review and rate movies — lightweight demo built with HTML/CSS/JS.</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="controls">
+      <div class="search"><input id="q" placeholder="Search movies by title, genre..." oninput="renderMovies()"/></div>
+      <div class="filter">
+        <select id="sort" onchange="renderMovies()">
+          <option value="newest">Sort: Newest</option>
+          <option value="rating">Sort: Highest rating</option>
+          <option value="alpha">Sort: A → Z</option>
+        </select>
+        <button class="btn" onclick="openAddModal()">+ Add Review</button>
+      </div>
+    </div>
+
+    <main id="main">
+      <div id="movies" class="grid"></div>
+      <div id="empty" class="empty" style="display:none">
+        <h3>No movies found</h3>
+        <p class="small">Try a different search, or click "Add Review" to add one.</p>
+      </div>
+    </main>
+
+    <footer>Built as a static demo • No backend required • Try leaving a review and rating.</footer>
+  </div>
+
+  <!-- Modal -->
+  <div id="modalBack" class="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3 id="modalTitle">Add / Edit Review</h3>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <input id="mTitle" placeholder="Movie title" style="flex:2;padding:10px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);color:inherit" />
+        <input id="mGenre" placeholder="Genre" style="flex:1;padding:10px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);color:inherit" />
+      </div>
+      <div class="form-row">
+        <div style="flex:1">
+          <label class="small">Rating</label>
+          <div id="ratingPicker" style="display:flex;gap:6px;margin-top:6px;">
+            <!-- stars injected -->
+          </div>
+        </div>
+        <div style="flex:1">
+          <label class="small">Poster URL (optional)</label>
+          <input id="mPoster" placeholder="https://..." style="width:100%;padding:10px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);color:inherit" />
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label class="small">Write your review</label>
+        <textarea id="mReview" placeholder="Share your thoughts..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="link" onclick="closeModal()">Cancel</button>
+        <button class="btn" onclick="saveReview()">Save Review</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sample data saved to localStorage so page is interactive without server
+    const sample = [
+      {id:1,title:'The Midnight Run',genre:'Action/Comedy',rating:4.5,review:'Fun ride with great chemistry.',poster:'',created:Date.now()-1000*60*60*24*30},
+      {id:2,title:'Aurora Skies',genre:'Drama',rating:3.8,review:'Beautiful cinematography but slow at times.',poster:'',created:Date.now()-1000*60*60*24*10},
+      {id:3,title:'Space Junk',genre:'Sci-Fi',rating:4.9,review:'One of the best recent sci-fi blockbusters.',poster:'',created:Date.now()-1000*60*60*24*3}
+    ];
+
+    function load(){
+      const raw = localStorage.getItem('mr_movies');
+      if(raw) return JSON.parse(raw);
+      localStorage.setItem('mr_movies', JSON.stringify(sample));
+      return sample.slice();
+    }
+    function save(data){ localStorage.setItem('mr_movies', JSON.stringify(data)); }
+
+    let movies = load();
+    let editingId = null;
+    let currentRating = 0;
+
+    function avgToStars(avg){
+      const rounded = Math.round(avg*2)/2; // halves
+      return rounded;
+    }
+
+    function renderMovies(){
+      const container = document.getElementById('movies');
+      const q = document.getElementById('q').value.toLowerCase();
+      const sort = document.getElementById('sort').value;
+      let out = movies.filter(m=> m.title.toLowerCase().includes(q) || (m.genre||'').toLowerCase().includes(q) || (m.review||'').toLowerCase().includes(q));
+      if(sort==='rating') out.sort((a,b)=>b.rating-a.rating);
+      else if(sort==='alpha') out.sort((a,b)=>a.title.localeCompare(b.title));
+      else out.sort((a,b)=>b.created-a.created);
+
+      container.innerHTML='';
+      if(out.length===0){ document.getElementById('empty').style.display='block'; return } else document.getElementById('empty').style.display='none';
+
+      out.forEach(movie=>{
+        const card = document.createElement('div'); card.className='card';
+        const poster = document.createElement('div'); poster.className='poster';
+        if(movie.poster) {
+          const img = document.createElement('img'); img.src=movie.poster; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; poster.appendChild(img);
+        } else {
+          poster.innerHTML=`<div style="text-align:center;padding:6px"><strong>${movie.title.split(' ').slice(0,2).map(s=>s[0]).join('')}</strong><div class='small' style='margin-top:6px;color:var(--muted)'>${movie.genre||'—'}</div></div>`;
+        }
+
+        const meta = document.createElement('div'); meta.className='meta';
+        meta.innerHTML = `
+          <div class='title'><h3>${escapeHtml(movie.title)}</h3><div class='chip'>${movie.genre||'—'}</div></div>
+          <div class='sub small'>${new Date(movie.created).toLocaleDateString()}</div>
+          <div class='rating'>
+            <div class='stars'>${renderStars(movie.rating)}</div>
+            <div class='small'>${movie.rating.toFixed(1)} / 5</div>
+          </div>
+          <div class='sub' style='margin-top:8px'>${escapeHtml(movie.review || '')}</div>
+        `;
+
+        const actions = document.createElement('div'); actions.className='actions';
+        const btnEdit = document.createElement('button'); btnEdit.className='link'; btnEdit.textContent='Edit'; btnEdit.onclick=()=>openEdit(movie.id);
+        const btnDel = document.createElement('button'); btnDel.className='link'; btnDel.textContent='Delete'; btnDel.onclick=()=>deleteMovie(movie.id);
+        actions.appendChild(btnEdit); actions.appendChild(btnDel);
+        meta.appendChild(actions);
+
+        card.appendChild(poster); card.appendChild(meta);
+        container.appendChild(card);
+      })
+    }
+
+    function renderStars(rating){
+      if(!rating && rating!==0) return '';
+      const full = Math.floor(rating);
+      const half = (rating - full) >= 0.5;
+      let html='';
+      for(let i=1;i<=5;i++){
+        if(i<=full) html += '<span class="star filled">★</span>';
+        else if(i===full+1 && half) html += '<span class="star filled">☆</span>';
+        else html += '<span class="star">☆</span>';
+      }
+      return html;
+    }
+
+    function openAddModal(){
+      editingId = null; currentRating = 0;
+      document.getElementById('modalTitle').textContent='Add Review';
+      document.getElementById('mTitle').value='';
+      document.getElementById('mGenre').value='';
+      document.getElementById('mPoster').value='';
+      document.getElementById('mReview').value='';
+      buildRatingPicker();
+      showModal();
+    }
+
+    function openEdit(id){
+      editingId = id;
+      const m = movies.find(x=>x.id===id); if(!m) return;
+      document.getElementById('modalTitle').textContent='Edit Review';
+      document.getElementById('mTitle').value=m.title;
+      document.getElementById('mGenre').value=m.genre;
+      document.getElementById('mPoster').value=m.poster||'';
+      document.getElementById('mReview').value=m.review||'';
+      currentRating = m.rating || 0;
+      buildRatingPicker(); showModal();
+    }
+
+    function buildRatingPicker(){
+      const container = document.getElementById('ratingPicker'); container.innerHTML='';
+      for(let i=1;i<=5;i++){
+        const star = document.createElement('button'); star.className='link'; star.style.padding='6px 10px'; star.textContent = (i<=currentRating ? '★' : '☆');
+        star.onclick = (e)=>{ currentRating = i; buildRatingPicker(); };
+        container.appendChild(star);
+      }
+    }
+
+    function showModal(){ document.getElementById('modalBack').style.display='flex'; }
+    function closeModal(){ document.getElementById('modalBack').style.display='none'; }
+
+    function saveReview(){
+      const title = document.getElementById('mTitle').value.trim();
+      if(!title){ alert('Please add a movie title'); return }
+      const genre = document.getElementById('mGenre').value.trim();
+      const poster = document.getElementById('mPoster').value.trim();
+      const review = document.getElementById('mReview').value.trim();
+      const rating = Number(currentRating) || 0;
+
+      if(editingId){
+        movies = movies.map(m=> m.id===editingId ? {...m,title,genre,poster,review,rating} : m);
+      } else {
+        const id = Math.max(0,...movies.map(m=>m.id))+1;
+        movies.unshift({id,title,genre,poster,review,rating,created:Date.now()});
+      }
+      save(movies); closeModal(); renderMovies();
+    }
+
+    function deleteMovie(id){
+      if(!confirm('Delete this movie review?')) return;
+      movies = movies.filter(m=>m.id!==id); save(movies); renderMovies();
+    }
+
+    function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>\"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]; }); }
+
+    // Init
+    renderMovies();
+
+    // Close modal on backdrop click
+    document.getElementById('modalBack').addEventListener('click', (e)=>{ if(e.target.id==='modalBack') closeModal(); });
+
+    // keyboard ESC
+    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
+
+  </script>
+</body>
+</html>
+
